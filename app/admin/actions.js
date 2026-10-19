@@ -4,6 +4,23 @@ import { redirect } from "next/navigation";
 import { createSessionClient } from "@/lib/supabase/session";
 
 /**
+ * Memastikan pengguna memiliki sesi admin yang valid di server.
+ * Melempar error jika belum login.
+ */
+export async function pastikanAdmin(supabase) {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Akses ditolak: Anda harus login sebagai admin.");
+  }
+
+  return user;
+}
+
+/**
  * Server Action untuk login admin menggunakan Supabase Auth.
  */
 export async function login(prevState, formData) {
@@ -84,15 +101,8 @@ export async function gantiPassword(prevState, formData) {
   try {
     const supabase = await createSessionClient();
 
-    // Pastikan admin sedang login sebelum mengubah data (aturan keamanan)
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { error: "Anda harus masuk terlebih dahulu untuk mengganti password." };
-    }
+    // Pastikan admin sedang login sebelum mengubah data (aturan keamanan nomor 3)
+    await pastikanAdmin(supabase);
 
     const { error } = await supabase.auth.updateUser({
       password: passwordBaru,
